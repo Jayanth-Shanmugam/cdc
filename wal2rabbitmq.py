@@ -20,13 +20,12 @@ class Producer:
     def __enter__(self):
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(
-                host=self.host,
-                port=self.port,
-                credentials=pika.PlainCredentials(self.username, self.password),
+                "localhost"
             )
         )
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue=self.queue_name)
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -39,15 +38,15 @@ class Producer:
         )
 
 
-class Consumer:
+class WALConsumer:
     def __init__(
         self,
-        host: str,
-        port: int,
-        database: str,
-        username: str,
-        password: str,
-        producer: Producer,
+        host: str = "localhost",
+        port: int = 5432,
+        database: str = "",
+        username: str = "",
+        password: str = "",
+        producer: Producer = None,
     ):
         self.host = host
         self.port = port
@@ -70,32 +69,55 @@ class Consumer:
             None
         """
 
-        conn = psycopg2.connect(
-            dbname=self.database,
-            user=self.username,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            connection_factory=LogicalReplicationConnection,
+        with psycopg2.connect(
+            dbname = self.database,
+            user = self.username,
+            password = self.password,
+            host = self.host,
+            port = self.port,
+            connection_factory = LogicalReplicationConnection,
+        ) as conn:
+
+            cur = conn.cursor()
+
+            cur.start_replication(
+                slot_name=slot_name,
+                options=options,
+                decode=decode,
+            )
+
+            while True:
+                msg = cur.read_message()
+                try:
+                    if msg:
+                        msg_payload = json.loads(msg.payload)
+                        db_changes = msg_payload.get("change")
+                        for change in db_changes:
+                            self.producer.publish(change)
+                        else:
+                            cur.send_feedback(flush_lsn = msg.wal_end)
+                    else:
+                        print("\rListening for WAL changes...", end = "", flush = True)
+                except KeyboardInterrupt:
+                    print("Closing replication connection...")
+                    break
+
+if __name__ == "__main__":
+    with Producer(
+        'localhost',
+        5297,
+        "",
+        "",
+        "hello"
+    ) as producer:
+
+        walconsumer = Consumer(
+            'localhost',
+            5432,
+            'warehouse',
+            'mkjay',
+            'mkjay',
+            producer
         )
 
-        cur = conn.cursor()
-
-        cur.start_replication(
-            slot_name=slot_name,
-            options=options,
-            decode=decode,
-        )
-
-        while True:
-            msg = cur.read_message()
-            try:
-                if msg:
-                    msg_payload = json.loads(msg.payload)
-                    db_changes = msg_payload.get("change")
-                    for change in db_changes:
-                        self.producer.publish(change)
-                else:
-                    print("\rListening for WAL changes...", end="", flush=True)
-            except KeyboardInterrupt:
-                print("Closing replication connection...")
+        walconsumer.consume('repl_inventory', {}, True)
