@@ -3,7 +3,7 @@ import json
 import psycopg2
 from psycopg2.extras import LogicalReplicationConnection
 
-class WALConsumer:
+class PGWALConsumer:
     def __init__(
         self,
         host: str = "localhost",
