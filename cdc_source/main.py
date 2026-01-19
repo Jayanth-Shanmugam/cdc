@@ -47,7 +47,7 @@ def main():
 
     with KafkaWALProducer(
         cluster_config=kafka_cluster_config,
-
+        topic=args.kafka_topic
     ) as producer:
         reader.consume(
             slot_name=args.slot_name,

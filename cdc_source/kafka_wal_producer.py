@@ -8,7 +8,7 @@ class KafkaWALProducer:
         self.cluster_config = cluster_config
         self.topic = topic
         self.wal_producer = None
-    
+        self.id = 0
 
     def __enter__(self):
         self.wal_producer = Producer(self.cluster_config)
@@ -16,7 +16,7 @@ class KafkaWALProducer:
         return self
     
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         if self.wal_producer:
             self.wal_producer.flush()
     
@@ -34,25 +34,29 @@ class KafkaWALProducer:
             )
 
 
-    def produce(self, key: str, message: dict):
+    def produce(self, message: dict, key: str = 0):
         self.wal_producer.produce(
             self.topic, 
-            key,
+            str(self.id),
             json.dumps(message),
             callback=self.delivery_callback
         )
+
+        self.id += 1
 
 
 if __name__ == "__main__":
     load_dotenv()
 
     cluster_config = {
-        'bootstrap.servers': os.getenv("BOOTSTRAP_SERVERS"),
-        'sasl.username':     os.getenv("CLUSTER_API_KEY"),
-        'sasl.password':     os.getenv("CLUSTER_API_SECRET"),
+        'bootstrap.servers': os.getenv("KAFKA_CLUSTER_BOOTSTRAP_SERVERS"),
+        'sasl.username':     os.getenv("KAFKA_CLUSTER_API_KEY"),
+        'sasl.password':     os.getenv("KAFKA_CLUSTER_API_SECRET"),
         'security.protocol': 'SASL_SSL',
         'sasl.mechanisms':   'PLAIN',
         'acks':              'all'
     }
 
-    
+    producer = Producer(cluster_config)
+
+    producer.flush()
