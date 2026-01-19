@@ -19,9 +19,7 @@ class Producer:
 
     def __enter__(self):
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                "localhost"
-            )
+            pika.ConnectionParameters("localhost")
         )
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue=self.queue_name)
@@ -70,14 +68,13 @@ class WALConsumer:
         """
 
         with psycopg2.connect(
-            dbname = self.database,
-            user = self.username,
-            password = self.password,
-            host = self.host,
-            port = self.port,
-            connection_factory = LogicalReplicationConnection,
+            dbname=self.database,
+            user=self.username,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            connection_factory=LogicalReplicationConnection,
         ) as conn:
-
             cur = conn.cursor()
 
             cur.start_replication(
@@ -95,29 +92,18 @@ class WALConsumer:
                         for change in db_changes:
                             self.producer.publish(change)
                         else:
-                            cur.send_feedback(flush_lsn = msg.wal_end)
+                            cur.send_feedback(flush_lsn=msg.wal_end)
                     else:
-                        print("\rListening for WAL changes...", end = "", flush = True)
+                        print("\rListening for WAL changes...", end="", flush=True)
                 except KeyboardInterrupt:
                     print("Closing replication connection...")
                     break
 
-if __name__ == "__main__":
-    with Producer(
-        'localhost',
-        5297,
-        "",
-        "",
-        "hello"
-    ) as producer:
 
+if __name__ == "__main__":
+    with Producer("localhost", 5297, "", "", "hello") as producer:
         walconsumer = WALConsumer(
-            'localhost',
-            5432,
-            'warehouse',
-            'mkjay',
-            'mkjay',
-            producer
+            "localhost", 5432, "warehouse", "mkjay", "mkjay", producer
         )
 
-        walconsumer.consume('repl_inventory', {}, True)
+        walconsumer.consume("repl_inventory", {}, True)

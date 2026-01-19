@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     # PostgreSQL database arguments
-    parser.add_argument("--pg-host", type=str, default='localhost')
+    parser.add_argument("--pg-host", type=str, default="localhost")
     parser.add_argument("--pg-port", type=int, default=5432)
     parser.add_argument("--pg-db", required=True)
     parser.add_argument("--slot-name", required=True)
@@ -37,17 +37,16 @@ def main():
     )
 
     kafka_cluster_config = {
-        'bootstrap.servers': KAFKA_CLUSTER_BOOTSTRAP_SERVERS,
-        'sasl.username':     KAFKA_CLUSTER_API_KEY,
-        'sasl.password':     KAFKA_CLUSTER_API_SECRET,
-        'security.protocol': 'SASL_SSL',
-        'sasl.mechanisms':   'PLAIN',
-        'acks':              'all'
+        "bootstrap.servers": KAFKA_CLUSTER_BOOTSTRAP_SERVERS,
+        "sasl.username": KAFKA_CLUSTER_API_KEY,
+        "sasl.password": KAFKA_CLUSTER_API_SECRET,
+        "security.protocol": "SASL_SSL",
+        "sasl.mechanisms": "PLAIN",
+        "acks": "all",
     }
 
     with KafkaWALProducer(
-        cluster_config=kafka_cluster_config,
-        topic=args.kafka_topic
+        cluster_config=kafka_cluster_config, topic=args.kafka_topic
     ) as producer:
         reader.consume(
             slot_name=args.slot_name,
@@ -55,6 +54,7 @@ def main():
             decode=True,
             on_change=producer.produce,
         )
+
 
 if __name__ == "__main__":
     main()
