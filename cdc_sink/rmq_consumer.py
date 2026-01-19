@@ -1,14 +1,15 @@
 import json
 import pika, sys, os
 
+
 class Consumer:
     def __init__(
-        self, 
-        host: str = "localhost", 
+        self,
+        host: str = "localhost",
         port: int = 5672,
-        vhost: str = '/', 
-        username: str = "guest", 
-        password: str = "guest", 
+        vhost: str = "/",
+        username: str = "guest",
+        password: str = "guest",
         queue_name: str = "",
     ):
         self.host = host
@@ -26,7 +27,7 @@ class Consumer:
                 self.host,
                 self.port,
                 self.vhost,
-                pika.PlainCredentials(self.username, self.password)
+                pika.PlainCredentials(self.username, self.password),
             )
         )
         self.channel = self.connection.channel()
@@ -41,33 +42,35 @@ class Consumer:
 
     def consume(self, callback):
         self.channel.basic_consume(
-            queue = self.queue_name,
-            on_message_callback= callback,
-            auto_ack = True
+            queue=self.queue_name, on_message_callback=callback, auto_ack=True
         )
 
         self.channel.start_consuming()
 
+
 def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
     channel = connection.channel()
 
-    channel.queue_declare(queue='cdc_stream')
+    channel.queue_declare(queue="cdc_stream")
 
     def callback(ch, method, properties, body):
         change = json.loads(body)
         print(f" [x] Received {change}")
 
-    channel.basic_consume(queue='cdc_stream', on_message_callback=callback, auto_ack=True)
+    channel.basic_consume(
+        queue="cdc_stream", on_message_callback=callback, auto_ack=True
+    )
 
-    print(' [*] Waiting for messages. To exit press CTRL+C')
+    print(" [*] Waiting for messages. To exit press CTRL+C")
     channel.start_consuming()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print('Interrupted')
+        print("Interrupted")
         try:
             sys.exit(0)
         except SystemExit:

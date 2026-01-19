@@ -3,7 +3,8 @@ import json
 import psycopg2
 from psycopg2.extras import LogicalReplicationConnection
 
-class WALConsumer:
+
+class PGWALConsumer:
     def __init__(
         self,
         host: str = "localhost",
@@ -33,14 +34,13 @@ class WALConsumer:
         """
 
         with psycopg2.connect(
-            dbname = self.database,
-            user = self.username,
-            password = self.password,
-            host = self.host,
-            port = self.port,
-            connection_factory = LogicalReplicationConnection,
+            dbname=self.database,
+            user=self.username,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            connection_factory=LogicalReplicationConnection,
         ) as conn:
-
             cur = conn.cursor()
 
             cur.start_replication(
@@ -49,17 +49,13 @@ class WALConsumer:
                 decode=decode,
             )
 
-            while True:
-                msg = cur.read_message()
-                try:
+            try:
+                while True:
+                    msg = cur.read_message()
                     if msg:
-                        msg_payload = json.loads(msg.payload)
-                        for change in msg_payload.get("change", []):
-                            on_change(change)
-                        else:
-                            cur.send_feedback(flush_lsn = msg.wal_end)
+                        on_change(msg)
+                        cur.send_feedback(flush_lsn=msg.wal_end)
                     else:
-                        print("\rListening for WAL changes...", end = "", flush = True)
-                except KeyboardInterrupt:
-                    print("Closing replication connection...")
-                    break
+                        print("\rListening for WAL changes...", end="", flush=True)
+            except KeyboardInterrupt:
+                print("Closing replication connection...")

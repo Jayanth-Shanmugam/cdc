@@ -1,14 +1,15 @@
 import json
 import pika
 
+
 class Producer:
     def __init__(
-        self, 
-        host: str = "localhost", 
+        self,
+        host: str = "localhost",
         port: int = 5672,
-        vhost: str = '/', 
-        username: str = "guest", 
-        password: str = "guest", 
+        vhost: str = "/",
+        username: str = "guest",
+        password: str = "guest",
         queue_name: str = "",
     ):
         self.host = host
@@ -26,7 +27,7 @@ class Producer:
                 self.host,
                 self.port,
                 self.vhost,
-                pika.PlainCredentials(self.username, self.password)
+                pika.PlainCredentials(self.username, self.password),
             )
         )
         self.channel = self.connection.channel()
@@ -41,7 +42,5 @@ class Producer:
 
     def publish(self, message: dict):
         self.channel.basic_publish(
-            exchange="", 
-            routing_key=self.queue_name, 
-            body=json.dumps(message)
+            exchange="", routing_key=self.queue_name, body=json.dumps(message)
         )
